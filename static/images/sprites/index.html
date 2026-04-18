@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Novel RPG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Zen+Kaku+Gothic+New:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0a14;
+            --panel: #13101e;
+            --border: #2a2040;
+            --accent: #c084fc;
+            --accent2: #f0abfc;
+            --text: #e8e0f0;
+            --muted: #7c6f9a;
+            --personaje: #f0abfc;
+            --npc: #86efac;
+            --mundo: #fbbf24;
+            --jugador: #93c5fd;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 280px 1fr 240px;
+            grid-template-rows: 1fr;
+        }
+
+        /* ── PANEL IZQUIERDO ── */
+        #panel-izq {
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .retrato-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 2/3;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #1a1428;
+        }
+
+        .retrato-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.5s ease;
+        }
+
+        .retrato-nombre {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 12px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            font-family: 'Noto Serif JP', serif;
+            font-size: 14px;
+            color: var(--accent2);
+        }
+
+        .stats-panel h3 {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .stat-label {
+            width: 60px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .stat-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+
+        .stat-valor { font-size: 11px; color: var(--muted); width: 28px; text-align: right; }
+
+        .stat-amistad .stat-fill  { background: #60a5fa; }
+        .stat-cariño .stat-fill   { background: #f472b6; }
+        .stat-miedo .stat-fill    { background: #a78bfa; }
+        .stat-odio .stat-fill     { background: #f87171; }
+
+        /* ── CENTRO ── */
+        #centro {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #fondo {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15;
+            transition: all 1s ease;
+            z-index: 0;
+        }
+
+        #header {
+            position: relative;
+            z-index: 1;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #hora {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 1px;
+        }
+
+        #titulo {
+            font-family: 'Noto Serif JP', serif;
+            font-size: 16px;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+
+        #btn-guardar {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        #btn-guardar:hover { border-color: var(--accent); color: var(--accent); }
+
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mensaje {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            animation: fadeIn 0.3s ease;
+            max-width: 85%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mensaje.jugador { align-self: flex-end; align-items: flex-end; }
+        .mensaje.personaje, .mensaje.npc { align-self: flex-start; }
+        .mensaje.mundo { align-self: center; max-width: 100%; }
+
+        .msg-nombre {
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .mensaje.personaje .msg-nombre { color: var(--personaje); }
+        .mensaje.npc .msg-nombre { color: var(--npc); }
+        .mensaje.jugador .msg-nombre { color: var(--jugador); }
+        .mensaje.mundo .msg-nombre { color: var(--mundo); }
+
+        .msg-burbuja {
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .mensaje.personaje .msg-burbuja {
+            background: #1e1530;
+            border: 1px solid #3b2d5a;
+            border-top-left-radius: 2px;
+        }
+
+        .mensaje.npc .msg-burbuja {
+            background: #0f2318;
+            border: 1px solid #1a4731;
+            border-top-left-radius: 2px;
+        }
+
+        .mensaje.jugador .msg-burbuja {
+            background: #0f1e35;
+            border: 1px solid #1e3a5f;
+            border-top-right-radius: 2px;
+        }
+
+        .mensaje.mundo .msg-burbuja {
+            background: transparent;
+            border: none;
+            color: var(--mundo);
+            font-style: italic;
+            font-size: 13px;
+            text-align: center;
+            opacity: 0.85;
+        }
+
+        /* Botón responder NPC */
+        .btn-responder-npc {
+            margin-top: 6px;
+            padding: 4px 12px;
+            background: none;
+            border: 1px solid var(--npc);
+            color: var(--npc);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .btn-responder-npc:hover { background: #0f2318; }
+
+        /* Input NPC inline */
+        .npc-reply-box {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .npc-reply-box input {
+            flex: 1;
+            background: #0f2318;
+            border: 1px solid var(--npc);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .npc-reply-box button {
+            background: none;
+            border: 1px solid var(--npc);
+            color: var(--npc);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* Input principal */
+        #input-area {
+            position: relative;
+            z-index: 1;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        #input-texto {
+            flex: 1;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+            resize: none;
+            height: 48px;
+        }
+
+        #input-texto:focus { border-color: var(--accent); }
+
+        #btn-enviar {
+            background: var(--accent);
+            border: none;
+            color: #0d0a14;
+            padding: 0 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        #btn-enviar:hover { background: var(--accent2); }
+        #btn-enviar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── PANEL DERECHO ── */
+        #panel-der {
+            background: var(--panel);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #panel-der h3 {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .npc-card {
+            background: #0f2318;
+            border: 1px solid #1a4731;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+        }
+
+        .npc-card-nombre {
+            color: var(--npc);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .npc-card-relacion { color: var(--muted); font-size: 11px; }
+
+        /* Setup overlay */
+        #setup-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #setup-box {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #setup-box h1 {
+            font-family: 'Noto Serif JP', serif;
+            color: var(--accent);
+            font-size: 22px;
+            letter-spacing: 3px;
+            text-align: center;
+        }
+
+        .setup-grupo { display: flex; flex-direction: column; gap: 6px; }
+
+        .setup-grupo label {
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .setup-grupo input,
+        .setup-grupo select,
+        .setup-grupo textarea {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .setup-grupo input:focus,
+        .setup-grupo select:focus,
+        .setup-grupo textarea:focus { border-color: var(--accent); }
+
+        .setup-grupo textarea { resize: vertical; min-height: 70px; }
+
+        .setup-grupo select option { background: var(--panel); }
+
+        #btn-comenzar {
+            background: var(--accent);
+            border: none;
+            color: #0d0a14;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+
+        #btn-comenzar:hover { background: var(--accent2); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* Typing indicator */
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: #1e1530;
+            border: 1px solid #3b2d5a;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .typing span {
+            width: 6px; height: 6px;
+            background: var(--muted);
+            border-radius: 50%;
+            animation: bounce 1s infinite;
+        }
+
+        .typing span:nth-child(2) { animation-delay: 0.15s; }
+        .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-overlay">
+      <div id="setup-box">
+        <h1>✦ VISUAL NOVEL RPG ✦</h1>
+
+        <div class="setup-grupo">
+            <label>Tu nombre</label>
+            <input type="text" id="s-jugador" placeholder="¿Cómo te llamás?">
+        </div>
+
+        <!-- Sección personaje -->
+        <div style="border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase;">✦ Personaje femenino</div>
+
+            <div class="setup-grupo">
+                <label>Nombre</label>
+                <input type="text" id="s-nombre" placeholder="Nombre de tu personaje">
+            </div>
+
+            <div class="setup-grupo">
+                <label>Personalidad</label>
+                <select id="s-personalidad" onchange="togglePersonalidadCustom()">
+                    <option value="tímida y reservada, le cuesta abrirse pero es muy leal">Tímida y reservada</option>
+                    <option value="alegre y extrovertida, siempre positiva y energética">Alegre y extrovertida</option>
+                    <option value="tsundere, fría y sarcástica al principio pero se va abriendo">Tsundere</option>
+                    <option value="misteriosa y seria, habla poco pero cada palabra importa">Misteriosa y seria</option>
+                    <option value="custom">✏️ Personalizada...</option>
+                </select>
+                <textarea id="s-personalidad-custom"
+                    placeholder="Describí su personalidad en detalle..."
+                    style="display:none; margin-top: 8px;"></textarea>
+            </div>
+        </div>
+
+        <!-- Sección apariencia -->
+        <div style="border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase;">✦ Apariencia</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="setup-grupo">
+                    <label>Cabello</label>
+                    <input type="text" id="s-cabello" placeholder="ej: negro largo">
+                </div>
+                <div class="setup-grupo">
+                    <label>Ojos</label>
+                    <input type="text" id="s-ojos" placeholder="ej: azules">
+                </div>
+                <div class="setup-grupo">
+                    <label>Ropa / Estilo</label>
+                    <input type="text" id="s-ropa" placeholder="ej: uniforme escolar">
+                </div>
+                <div class="setup-grupo">
+                    <label>Rasgos extra</label>
+                    <input type="text" id="s-rasgos" placeholder="ej: anteojos, colitas">
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección mundo -->
+        <div style="border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase;">✦ El mundo</div>
+
+            <div class="setup-grupo">
+                <label>Contexto de la historia</label>
+                <textarea id="s-mundo" placeholder="ej: colegio secundario en Tokio, aldea medieval fantástica, ciudad cyberpunk..."></textarea>
+            </div>
+        </div>
+
+        <button id="btn-comenzar" onclick="iniciarJuego()">✦ Comenzar historia</button>
+    </div>
+
+
+</div>
+
+<!-- JUEGO -->
+<!-- Panel izquierdo: retrato + stats -->
+<div id="panel-izq">
+    <div class="retrato-container">
+        <img id="retrato" src="" alt="personaje">
+        <div class="retrato-nombre" id="retrato-nombre"></div>
+    </div>
+
+    <div class="stats-panel">
+        <h3>Estado emocional</h3>
+        <div class="stat-row stat-amistad">
+            <span class="stat-label">Amistad</span>
+            <div class="stat-bar"><div class="stat-fill" id="bar-amistad" style="width:10%"></div></div>
+            <span class="stat-valor" id="val-amistad">10</span>
+        </div>
+        <div class="stat-row stat-cariño">
+            <span class="stat-label">Cariño</span>
+            <div class="stat-bar"><div class="stat-fill" id="bar-cariño" style="width:0%"></div></div>
+            <span class="stat-valor" id="val-cariño">0</span>
+        </div>
+        <div class="stat-row stat-miedo">
+            <span class="stat-label">Miedo</span>
+            <div class="stat-bar"><div class="stat-fill" id="bar-miedo" style="width:0%"></div></div>
+            <span class="stat-valor" id="val-miedo">0</span>
+        </div>
+        <div class="stat-row stat-odio">
+            <span class="stat-label">Odio</span>
+            <div class="stat-bar"><div class="stat-fill" id="bar-odio" style="width:0%"></div></div>
+            <span class="stat-valor" id="val-odio">0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Centro: chat -->
+<div id="centro">
+    <div id="fondo"></div>
+    <div id="header">
+        <div id="titulo">✦ Visual Novel RPG</div>
+        <div id="hora">—</div>
+        <button id="btn-guardar" onclick="guardar()">💾 Guardar</button>
+    </div>
+    <div id="chat"></div>
+    <div id="input-area">
+        <textarea id="input-texto" placeholder="Escribí algo..." onkeydown="teclaEnter(event)"></textarea>
+        <button id="btn-enviar" onclick="enviarMensaje()">Enviar</button>
+    </div>
+</div>
+
+<!-- Panel derecho: NPCs -->
+<div id="panel-der">
+    <h3>Personajes</h3>
+    <div id="lista-npcs"></div>
+</div>
+
+<script>
+    let nombrePersonaje = ""
+    let aparienciaPersonaje = ""
+    let pendienteNpcId = null
+
+function togglePersonalidadCustom() {
+        const sel = document.getElementById("s-personalidad")
+        const custom = document.getElementById("s-personalidad-custom")
+        custom.style.display = sel.value === "custom" ? "block" : "none"
+    }
+
+    function iniciarJuego() {
+        const jugador = document.getElementById("s-jugador").value.trim()
+        const nombre = document.getElementById("s-nombre").value.trim()
+        const cabello = document.getElementById("s-cabello").value.trim()
+        const ojos = document.getElementById("s-ojos").value.trim()
+        const ropa = document.getElementById("s-ropa").value.trim()
+        const rasgos = document.getElementById("s-rasgos").value.trim()
+        const mundo = document.getElementById("s-mundo").value.trim()
+
+        const selPersonalidad = document.getElementById("s-personalidad")
+        const personalidad = selPersonalidad.value === "custom"
+            ? document.getElementById("s-personalidad-custom").value.trim()
+            : selPersonalidad.value
+
+        if (!jugador || !nombre || !cabello || !ojos || !mundo || !personalidad) {
+            alert("Completá los campos obligatorios")
+            return
+        }
+
+        const apariencia = `cabello ${cabello}, ojos ${ojos}, ${ropa}${rasgos ? ", " + rasgos : ""}`
+        nombrePersonaje = nombre
+        aparienciaPersonaje = apariencia
+
+        const personaje = {
+            nombre,
+            personalidad,
+            apariencia,
+            stats: { amistad: 10, cariño: 0, miedo: 0, odio: 0 }
+        }
+
+        fetch("/api/iniciar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jugador_nombre: jugador, personaje, contexto_mundo: mundo })
+        })
+        .then(r => r.json())
+        .then(() => {
+            document.getElementById("setup-overlay").style.display = "none"
+            document.getElementById("retrato-nombre").textContent = nombre
+            generarRetrato("neutral")
+            cargarEstado()
+        })
+    }
+
+        nombrePersonaje = nombre
+        aparienciaPersonaje = apariencia
+
+        const personaje = {
+            nombre,
+            personalidad,
+            apariencia,
+            stats: { amistad: 10, cariño: 0, miedo: 0, odio: 0 }
+        }
+
+        fetch("/api/iniciar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jugador_nombre: jugador, personaje, contexto_mundo: mundo })
+        })
+        .then(r => r.json())
+        .then(() => {
+            document.getElementById("setup-overlay").style.display = "none"
+            document.getElementById("retrato-nombre").textContent = nombre
+            generarRetrato("neutral")
+            cargarEstado()
+        })
+    }
+
+    function generarRetrato(expresion) {
+        const prompt = encodeURIComponent(
+            `anime girl, ${aparienciaPersonaje}, ${expresion} expression, visual novel style, portrait, soft lighting`
+        )
+        document.getElementById("retrato").src =
+            `https://image.pollinations.ai/prompt/${prompt}?width=400&height=600&nologo=true&seed=${Math.floor(Math.random()*1000)}`
+    }
+
+    function cargarEstado() {
+        fetch("/api/estado_juego")
+        .then(r => r.json())
+        .then(d => {
+            if (!d.iniciado) return
+            actualizarStats(d.stats)
+            document.getElementById("hora").textContent = d.hora
+            document.getElementById("fondo").style.backgroundImage =
+                `url(https://image.pollinations.ai/prompt/${encodeURIComponent(d.mundo + ", anime background, detailed")}?width=1200&height=800&nologo=true)`
+
+            const lista = document.getElementById("lista-npcs")
+            lista.innerHTML = ""
+            d.npcs.forEach(npc => {
+                lista.innerHTML += `
+                    <div class="npc-card">
+                        <div class="npc-card-nombre">👤 ${npc.nombre}</div>
+                        <div class="npc-card-relacion">${npc.relacion}</div>
+                    </div>`
+            })
+        })
+    }
+
+    function actualizarStats(stats) {
+        for (const [stat, val] of Object.entries(stats)) {
+            const bar = document.getElementById(`bar-${stat}`)
+            const valEl = document.getElementById(`val-${stat}`)
+            if (bar) bar.style.width = val + "%"
+            if (valEl) valEl.textContent = val
+        }
+    }
+
+    function agregarMensaje(tipo, nombre, texto, npcId = null) {
+        const chat = document.getElementById("chat")
+        const div = document.createElement("div")
+        div.className = `mensaje ${tipo}`
+
+        let extra = ""
+        if (tipo === "npc" && npcId !== null) {
+            extra = `<button class="btn-responder-npc" onclick="mostrarInputNpc(this, ${npcId})">Responder</button>`
+        }
+
+        div.innerHTML = `
+            <span class="msg-nombre">${nombre}</span>
+            <div class="msg-burbuja">${texto}</div>
+            ${extra}
+        `
+        chat.appendChild(div)
+        chat.scrollTop = chat.scrollHeight
+        return div
+    }
+
+    function mostrarInputNpc(btn, npcId) {
+        btn.remove()
+        const parent = btn.closest ? btn.closest(".mensaje") : btn.parentElement
+        const box = document.createElement("div")
+        box.className = "npc-reply-box"
+        box.innerHTML = `
+            <input type="text" placeholder="Respondele..." id="npc-input-${npcId}">
+            <button onclick="responderNpc(${npcId})">→</button>
+        `
+        // Agregamos la box después del mensaje
+        const chat = document.getElementById("chat")
+        const msgs = chat.querySelectorAll(".mensaje")
+        msgs[msgs.length - 1].appendChild(box)
+        document.getElementById(`npc-input-${npcId}`).focus()
+    }
+
+    function responderNpc(npcId) {
+        const input = document.getElementById(`npc-input-${npcId}`)
+        const texto = input.value.trim()
+        if (!texto) return
+
+        input.parentElement.remove()
+        agregarMensaje("jugador", "Vos", texto)
+
+        fetch("/api/responder_npc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ npc_id: npcId, texto })
+        })
+        .then(r => r.json())
+        .then(d => {
+            agregarMensaje("npc", d.npc_respuesta.nombre, d.npc_respuesta.texto)
+            agregarMensaje("personaje", d.personaje_reaccion.nombre, d.personaje_reaccion.texto)
+        })
+    }
+
+    function mostrarTyping() {
+        const chat = document.getElementById("chat")
+        const div = document.createElement("div")
+        div.className = "mensaje personaje"
+        div.id = "typing-indicator"
+        div.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`
+        chat.appendChild(div)
+        chat.scrollTop = chat.scrollHeight
+    }
+
+    function quitarTyping() {
+        const t = document.getElementById("typing-indicator")
+        if (t) t.remove()
+    }
+
+    function enviarMensaje() {
+        const input = document.getElementById("input-texto")
+        const texto = input.value.trim()
+        if (!texto) return
+
+        input.value = ""
+        document.getElementById("btn-enviar").disabled = true
+        agregarMensaje("jugador", "Vos", texto)
+        mostrarTyping()
+
+        fetch("/api/mensaje", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texto })
+        })
+        .then(r => r.json())
+        .then(d => {
+            quitarTyping()
+            actualizarStats(d.stats)
+            document.getElementById("hora").textContent = d.hora
+
+            d.eventos.forEach(ev => {
+                agregarMensaje(ev.tipo, ev.nombre, ev.texto, ev.npc_id ?? null)
+
+                // Cambiar expresión según el tipo de mensaje
+                if (ev.tipo === "personaje") {
+                    const texto = ev.texto.toLowerCase()
+                    if (texto.includes("feliz") || texto.includes("sonr") || texto.includes("contenta"))
+                        generarRetrato("happy")
+                    else if (texto.includes("enoj") || texto.includes("molest"))
+                        generarRetrato("angry")
+                    else if (texto.includes("triste") || texto.includes("llor"))
+                        generarRetrato("sad")
+                    else if (texto.includes("sorprend") || texto.includes("no puedo creer"))
+                        generarRetrato("surprised")
+                }
+            })
+
+            document.getElementById("btn-enviar").disabled = false
+        })
+    }
+
+    function teclaEnter(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault()
+            enviarMensaje()
+        }
+    }
+
+    function guardar() {
+        fetch("/api/guardar", { method: "POST" })
+        .then(() => {
+            const btn = document.getElementById("btn-guardar")
+            btn.textContent = "✓ Guardado"
+            setTimeout(() => btn.textContent = "💾 Guardar", 2000)
+        })
+    }
+</script>
+</body>
+</html>
