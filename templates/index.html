@@ -844,7 +844,7 @@ async function iniciarJuego() {
             const exp = expresiones[i]
             actualizarProgreso(`Generando retrato: ${exp}...`, 25 + (i * 8))
 
-            const promptSprite = `anime girl, ${apariencia}, ${exp} expression, visual novel style, portrait, soft lighting, high quality, detailed face, masterpiece`
+            const promptSprite = `anime girl, ${aparienciaBase}, ${exp} expression, visual novel style, portrait, soft lighting, high quality, detailed face, masterpiece`
 
             const controller = new AbortController()
             const timeoutId = setTimeout(() => controller.abort(), 60000)
