@@ -371,7 +371,7 @@ def generar_sprite(expresion, apariencia):
         ruta = SPRITES_DIR / f"{nombre_archivo}.png"
 
         prompt = f"""
-        anime girl, {apariencia},
+        anime girl, {aparienciaBase},
         {expresion} expression,
         unique character design,
         distinct face, different eye color, varied features,
